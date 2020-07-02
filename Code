@@ -1,0 +1,131 @@
+
+data Texteditor = Texteditor (String, String, String, String, String, String) deriving (Show) -- output result of operations when they are done
+t = Texteditor ([], [], [], [], [], []) -- create syntax and declares text editor to something
+
+
+destroy :: Texteditor -> ()
+destroy (Texteditor(_,_,_,_,_,_)) = ( )
+-- completely destroys text editor returning nothing
+
+initiate :: Texteditor -> Texteditor
+initiate (Texteditor(_,_,_,_,_,_)) = ( Texteditor("", "", "", "", "", "") )
+-- returns the text editor to its state at launch, works as a reset
+
+
+write :: Texteditor -> Char -> Texteditor  
+write (Texteditor(x,y,s,b1,b2,t)) c = ( Texteditor(x++[c], y, s, b1, "W", x++s++y) )
+-- 'x++s++y' stores the current state of the text editor before any change, for undo
+-- "W" stores in second buffer the last redo-able operation, for redo
+-- adds entered character to the end of left of cursor
+
+delete :: Texteditor -> Texteditor
+delete (Texteditor(x,y,s,b1,b2,t)) = ( Texteditor (errorCatch(x, y, s, b1, b2, t)) )
+    where
+        errorCatch( ([ ], y, s, b1, b2, t) ) = ( ([ ], y , [ ], b1, "D", x++s++y) )
+        errorCatch( (x, y, s, b1, b2, t) ) = ( (reverse(tail(reverse x)), y, [ ], b1, "D", x++s++y) )
+-- error catch if nothing is left of cursor, do not try to operate on
+-- otherwise remove last character left of cursor and empty selection (if any)
+
+copy :: Texteditor -> Texteditor
+copy (Texteditor(x,y,s,b1,b2,t)) =  ( Texteditor(x, y, s, s, b2, t) )
+-- store the current selection into buffer
+
+paste :: Texteditor -> Texteditor
+paste (Texteditor(x,y,s,b1,b2,t)) =  ( Texteditor(x++b1, y, [ ], b1, "P", x++s++y) )
+-- add the buffer to the end of left of cursor and empty selection
+
+cut :: Texteditor -> Texteditor
+cut (Texteditor(x,y,s,b1,b2,t)) =  ( Texteditor(x, y, [ ], s, b2, x++s++y) )
+-- empty selection and store the selection in the buffer
+
+selectLetterLeft :: Texteditor -> Texteditor
+selectLetterLeft (Texteditor(x,y,s,b1,b2,t)) =  ( Texteditor(reverse(tail(reverse x)), y, head(reverse x):s, b1, b2, t) )
+-- take the last character left of cursor and add it to selections
+
+selectWordLeft :: Texteditor -> Texteditor
+selectWordLeft (Texteditor(x,y,s,b1,b2,t)) =  ( Texteditor (stripOutX(x, y, s, b1, b2, t)) )
+    where
+        stripOutX( ([ ], y, s, b1, b2, t) ) = ( ([ ], y, s, b1, b2, t) )
+        stripOutX( (x, y, s, b1, b2, t) ) = if head(reverse x) == ' '
+            then stripOutX( (reverse(tail(reverse x)), y, head(reverse x):s, b1, b2, t) )
+            else selectCharsX( (reverse(tail(reverse x)), y, head(reverse x):s, b1, b2, t) )
+
+        selectCharsX( ([ ], y, s, b1, b2, t) ) = ( ([ ], y, s, b1, b2, t) )
+        selectCharsX( (x, y, s, b1, b2, t) ) = if head(reverse x) /= ' '
+            then selectCharsX( (reverse(tail(reverse x)), y, head(reverse x):s, b1, b2, t) )
+            else ( (x, y, s, b1, b2, t) )
+-- selects word immediately left of cursor, 
+-- with error catch to keep selecting spaces until other characters are selected aka until a word is selected
+
+selectAllLeft :: Texteditor -> Texteditor
+selectAllLeft (Texteditor(x,y,s,b1,b2,t)) = ( Texteditor ([ ], y, x++s, b1, b2, t) )
+-- add everything left of cursor to current selections and empty left of cursor
+
+selectLetterRight :: Texteditor -> Texteditor
+selectLetterRight (Texteditor(x,y,s,b1,b2,t)) = ( Texteditor (x, tail y, head y:s, b1, b2, t) )
+-- take the first character right of cursor and add it to selections
+
+selectWordRight :: Texteditor -> Texteditor
+selectWordRight (Texteditor(x,y,s,b1,b2,t)) =  ( Texteditor (stripOutY(x, y, s, b1, b2, t)) )
+    where
+        stripOutY( x, [ ], s, b1, b2, t ) = ( x, [ ], s, b1, b2, t )
+        stripOutY( x, y, s, b1, b2, t ) = if head y == ' '
+            then stripOutY( x, tail y, s++[head y], b1, b2, t )
+            else selectCharsY( x, tail y, s++[head y], b1, b2, t )
+
+        selectCharsY( x, [ ], s, b1, b2, t ) = ( x, [ ], s, b1, b2, t )
+        selectCharsY( x, y, s, b1, b2, t ) = if head y /= ' '
+            then selectCharsY( x, tail y, s++[head y], b1, b2, t )
+            else ( x, y, s, b1, b2, t )
+-- selects word immediately right of cursor,
+-- with error catch to keep selecting spaces until other characters are selected aka until a word is selected
+
+selectAllRight :: Texteditor -> Texteditor
+selectAllRight (Texteditor(x,y,s,b1,b2,t)) = ( Texteditor (x, [ ], s++y, b1, b2, t) )
+-- add everything right of cursor to the current selections and empty right of cursor
+
+selectAll :: Texteditor -> Texteditor
+selectAll (Texteditor(x,y,s,b1,b2,t)) = ( Texteditor ([ ], [ ], x++y, b1, b2, t) )
+-- add everything to selections and empty those now in selections
+
+moveLeft :: Texteditor -> Texteditor
+moveLeft (Texteditor(x,y,s,b1,b2,t)) = ( Texteditor (reverse(tail(reverse x)), head(reverse x):y, s, b1, b2, t) )
+-- move cursor one character left
+
+moveLeftEnd :: Texteditor -> Texteditor
+moveLeftEnd (Texteditor(x,y,s,b1,b2,t)) = ( Texteditor ([ ], x++y, s, b1, b2, t) )
+-- move cursor 'home' to the start of left of cursor
+
+moveRight :: Texteditor -> Texteditor
+moveRight (Texteditor(x,y,s,b1,b2,t)) = ( Texteditor (x++[head y], tail y, s, b1, b2, t) )
+-- move cursor one character right
+
+moveRightEnd :: Texteditor -> Texteditor
+moveRightEnd (Texteditor(x,y,s,b1,b2,t)) = ( Texteditor (x++y, [ ], s, b1, b2, t) )
+-- move cursor 'end' to the end of right of cursor
+
+redo :: Texteditor -> Texteditor
+redo (Texteditor(x,y,s,b1,b2,t)) = ( Texteditor (specificOperation(x, y, s, b1, b2, t )) )
+    where
+        specificOperation( x, y, s, b1, b2, t ) = if b2 == "D"
+            then if x == [ ]
+            then ( [ ], y , [ ], b1, "D", t )
+                else ( reverse(tail(reverse x)), y, [ ], b1, "D", x++s++y )
+            else specificOperationP( x, y, s, b1, b2, t )
+
+        specificOperationP( x, y, s, b1, b2, t ) = if b2 == "P"
+            then ( x++b1, y, [ ], b1, "P", x++s++y )
+            else specificOperationW( x, y, s, b1, b2, t )
+
+        specificOperationW( x, y, s, b1, b2, t ) = if b2 == "W"
+            then ( x++[head(reverse x)], y, s, b1, "W", x++s++y )
+            else ( x, y, s, b1, b2, t )
+-- redo operation checks what operation is stored in 'b2' and preforms the equivilant operation again
+
+undo :: Texteditor -> Texteditor
+undo (Texteditor(x,y,s,b1,b2,t)) = ( Texteditor (undoErrorCatch(x, y, s, b1, b2, t)) )
+    where
+        undoErrorCatch( x, y, s, b1, b2, [ ] ) = ( x, y, s, b1, b2, [ ] )
+        undoErrorCatch( x, y, s, b1, b2, t ) = ( t, y, s, b1, b2, x++s++y )
+-- error catch to detect if the state of the text editor is empty, so return empty (not operate on it)
+-- otherwise set left of cursor to be the previous state of the text editor
