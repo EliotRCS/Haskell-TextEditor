@@ -1,0 +1,135 @@
+NAME
+Text Editor - an ADT representing a Text Editor
+
+SETS
+T	the set of text editors, { (L, R, S, B, T) }
+L	the set of LeftCursor, { [C] }
+R	the set of RightCursor, { [C] }
+S	the set of selections, { [C] }
+B	the set of buffers, { [C] }
+C	the set of characters, { a..z ∪ A..Z ∪ 0..9 }
+
+SYNTAX 	
+
+create: 	⟘	→	T 
+destroy: 	T 	→	⟘
+Init: 	T 	→	T
+Type	T x C	→	T
+DeleteText	T	→	T     
+Copy	T	→	T
+Paste	T	→	T 
+Cut	T	→	T 
+SelectLetterLeft	T	→	T
+SelectWordLeft	T	→	T
+SelectAllLeft	T	→	T
+SelectLetterRight	T	→	T
+SelectWordRight	T	→	T
+SelectAllRight	T	→	T
+SelectAll	T	→	T
+MoveRight
+	T	→	T
+MoveRightEnd
+	T	→	T
+MoveLeft	T	→	T
+MoveLeftEnd	T	→	T
+Undo	T 	→	T 
+Redo	T 	→	T 
+
+SEMANTICS
+∀x.x∈L, ∀y.y∈R 
+
+Pre-Create( ) :: true
+Post-Create( ; r ) :: r = ( [ ], [ ], [ ], [ ], [ ] )
+
+Pre-Destroy( x, y, s, b, t ) :: true         
+Post-Destroy( _ , _ , _ , _ , _ ; r ) :: r = ⟘
+
+Pre-Init( (x, y, s, b, t ) :: true
+Post-Init( _ , _ , _ , _ , _ ; r ) :: r = ( [ ], [ ], [ ], [ ], [ ] )
+
+Pre-Type( (x, y, s, b, t), c ) :: true
+Post-Type( (x, y, s, b, t), c ; r ) :: r = ( x^^[c], y, s, “W”, x^^s^^y ) 
+
+Pre-DeleteText( x, y, s, b, t ) :: true
+Post-DeleteText( x, y, s, b, t ; r ) :: r = ( reverse(tail(reverse x)), y, [ ], “D”, x^^s^^y ) 
+
+Pre-Copy( x, y, s, b, t ) :: true 
+Post-Copy( x, y, s, b, t ; r) :: r = ( x, y, s, s, t )  
+
+Pre-Paste( x, y, s, b, t ) :: true
+Post-Paste( x, y, s, b, t ; r ) :: r = ( x^^b, y, [ ], “P”, x^^s^^y )  
+
+Pre-Cut( x, y, s, b, t ) :: true
+Post-Cut( x, y, s, b, t ; r) :: r = ( x, y, [ ], s, x^^s^^y )	
+
+Pre-selectLetterLeft( x, y, s, b, t ) :: true 
+Post-selectLetterLeft( x, y, s, b, t ; r ) :: r = ( reverse(tail(reverse x)), y, head(reverse x). s, b, t )
+
+Pre-selectWordLeft( x, y, s, b, t ) :: true
+Post-selectWordLeft( x, y, s, b, t ; r ) :: r = StripoutX( x, y, s, b, t )
+	where
+		StripoutX( [ ], y, s, b, t ) = ( [ ], y, s, b, t )
+		StripoutX( x, y, s, b, t ) = if head(reverse x) == ‘ ‘
+			then StripoutX( reverse(tail(reverse x)), y, head(reverse x).s, b, t )
+			else SelectCharsX( reverse(tail(reverse x)), y, head(reverse x).s, b, t )
+		SelectCharsX( [ ], y, s, b, t ) = ( [ ], y, s, b, t )
+		SelectCharsX( x, y, s, b, t ) = if head(reverse x) != ‘ ‘
+                         	then SelectCharsX( reverse(tail(reverse x)), y, head(reverse x).s, b, t )
+			else ( x, y, s, b, t )
+
+Pre-selectAllLeft( x, y, s, b, t )  :: true
+Post-selectAllLeft( x, y, s, b, t ; r ) :: r = ( [ ], y, x^^s, b, t )
+
+Pre-selectLetterRight( x, y, s, b, t ) :: true
+Post-selectLetterRight( x, y, s, b, t ; r ) :: r = ( x, tail y, head y.s, b, t )
+
+Pre-selectWordRight( x, y, s, b, t ) :: true
+Post-selectWordRight( x, y, s, b, t; r ) :: r = StripoutY( x, y, s, b, t )
+	where
+		StripoutY( x, [ ], s, b, t ) = ( x, [ ], s, b, t )
+		StripoutY( x, y, s, b, t ) = if head y == ‘ ‘
+			then StripoutY( x, tail y, s^^[head y], b, t )
+			else SelectCharsY( x, tail y, s^^[head y], b, t )
+		SelectCharsY( x, [ ], s, b, t ) = ( x, [ ], s, b, t )
+		SelectCharsY( x, y, s, b, t ) = if head y != ‘ ‘
+			then SelectCharsY( x, tail y, s^^[head y], b, t )
+			else ( x, y, s, b, t ) 
+
+Pre-selectAllRight( x, y, s, b, t ) :: true
+Post-selectAllRight( x, y, s, b, t ; r ) :: r = ( x, [ ], s^^y, b, t )
+
+Pre-SelectAll( x, y, s, b, t ) :: true
+Post-SelectAll( x, y, s, b, t ; r ) :: r = ( [ ], [ ], x^^y, b, t )
+
+Pre-MoveLeft( x, y, s, b, t ) :: true
+Post-MoveLeft( x, y, s, b, t ; r ) :: r = ( reverse(tail(reverse x)), head(reverse x).y, s, b, t )  
+
+Pre-MoveLeftEnd( x, y, s, b, t ) :: true
+Post-MoveLeftEnd( x, y, s, b, t ; r ) :: r = ( [ ], x^^y, s, b, t )
+
+Pre-MoveRight( x, y, s, b, t ) :: true
+Post-MoveRight( x, y, s, b, t ; r ) :: r = ( x^^[head y], tail y, s, b, t )   
+
+Pre-MoveRightEnd( x, y, s, b, t ) :: true
+Post-MoveRightEnd( x, y, s, b, t ; r ) :: r = ( x^^y, [ ], s, b, t )
+
+
+Pre-Redo ( x, y, s, b, t ) :: true    
+Post-Redo( x, y, s, b, t ; r ) :: r = SpecificOperation( x, y, s, b, t )
+where
+SpecificOperation( x, y, s, b, t ) = if b == "D" 
+then ( reverse(tail(reverse x)), y, [ ], b, x^^s^^y )
+else SpecificOperationP( x, y, s, b, t )
+SpecificOperationP( x, y, s, b, t ) = if b == "P"
+then ( x^^b, y, [ ], b, x^^s^^y )
+else SpecificOperationW( x, y, s, b, t )
+SpecificOperationW( x, y, s, b, t ) = if b == "W"
+then ( x^^[head(reverse x)], y, s, b, x^^s^^y )
+else ( x, y, s, b, t )
+
+Pre-Undo( x, y, s, b, t ) :: true
+Post-Undo( x, y, s, b, t ; r ) :: r = undoErrorCatch( x, y, s, b, t )
+	where
+		undoErrorCatch ( x, y, s, b, [ ] ) = ( x, y, s, [ ], [ ] )
+		undoErrorCatch( x, y, s, b, t ) = ( t, y, s, [ ], x^^s^^y )
+
